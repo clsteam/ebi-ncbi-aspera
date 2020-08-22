@@ -35,10 +35,11 @@ def main():
 
     # optional
     parser.add_argument("--project", help="project name, such as PRJNA320473")
+    parser.add_argument("--sra", help="list file of sra name")
     parser.add_argument("--key", help="private-key file name (id_rsa) of aspera", default="~/.aspera/connect/etc/asperaweb_id_dsa.openssh")
     parser.add_argument("--ncbi", help="download form NCBI database, default EBI", action='store_true')
     # parser.add_argument("--ncbi", help="download form NCBI database", action='store_true')
-    parser.add_argument("--save", help="whether save url file, default ./ftp_url.json", action='store_true')
+    parser.add_argument("--save", help="whether save url file, default ./ftp_url.json[useful for --project]", action='store_true')
     parser.add_argument("--exclude", help="The downloaded file excludes the following accession, and provide the accession list file")
     parser.add_argument("--include",help="The downloaded file includes the following accession, and provide the accession list file")
 
@@ -46,13 +47,29 @@ def main():
 
     print(message.format(key=args.key), flush=True)
 
-
-    url = "https://www.ebi.ac.uk/ena/portal/api/filereport?accession={project}&result=read_run&fields=study_accession,sample_accession,experiment_accession,run_accession,tax_id,scientific_name,fastq_ftp,submitted_ftp,sra_ftp&format=json&download=true".format(project=args.project)
     if args.ncbi:
         # NCBI
         print("Sorry, this option is not currently supported.", flush=True)
         quit()
 
+    if args.sra:
+        with open(args.sra, "r") as handle:
+            for line in handle:
+                accession = line.strip().split(".", 1)[0]
+                url = "https://www.ebi.ac.uk/ena/portal/api/filereport?accession={accession}&result=read_run&fields=study_accession,sample_accession,experiment_accession,run_accession,tax_id,scientific_name,fastq_ftp,submitted_ftp,sra_ftp&format=json&download=true".format(
+                    accession=accession)
+                download(url, args)
+    elif args.project:
+        url = "https://www.ebi.ac.uk/ena/portal/api/filereport?accession={accession}&result=read_run&fields=study_accession,sample_accession,experiment_accession,run_accession,tax_id,scientific_name,fastq_ftp,submitted_ftp,sra_ftp&format=json&download=true".format(
+            accession=args.project)
+        download(url, args)
+    else:
+        print("parameters of project or sra need one at least.")
+        quit()
+
+
+
+def download(url, args):
     if args.exclude:
         with open(args.exclude, "r") as handle:
             exclude = [x.strip() for x in handle.readlines()]
